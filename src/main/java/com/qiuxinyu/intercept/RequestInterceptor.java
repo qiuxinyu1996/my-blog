@@ -13,6 +13,9 @@ import javax.servlet.http.HttpServletResponse;
 public class RequestInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if ("OPTIONS".equals(request.getMethod())) {
+            return true;
+        }
         // 拦截校验用户是否登录
         if (JWTUtils.resolveToken(request.getHeader("token"))) {
             return true;
