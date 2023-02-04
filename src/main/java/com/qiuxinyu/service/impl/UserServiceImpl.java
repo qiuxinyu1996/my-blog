@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qiuxinyu.common.Result;
 import com.qiuxinyu.common.ErrorCode;
+import com.qiuxinyu.exception.BadRequestException;
+import com.qiuxinyu.exception.ForbiddenException;
+import com.qiuxinyu.exception.InternalServerException;
 import com.qiuxinyu.pojo.entity.User;
 import com.qiuxinyu.pojo.param.GetPasswordVerifyParam;
 import com.qiuxinyu.pojo.param.RegisterParam;
@@ -37,12 +40,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             dbUser = getUserByMobile(loginUser.getUsername());
         }
         if (dbUser == null) {
-            response.setStatus(401);
-            return Result.fail(ErrorCode.NO_USER, "用户名或密码错误");
+            throw new ForbiddenException(ErrorCode.NO_USER.getMessage());
         }
         if (!dbUser.getPassword().equals(loginUser.getPassword())) {
-            response.setStatus(401);
-            return Result.fail(ErrorCode.ERROR_PASSWORD, "用户名或密码错误");
+            throw new ForbiddenException(ErrorCode.ERROR_PASSWORD.getMessage());
         }
 
         String token = JWTUtils.generateToken(loginUser);
@@ -69,32 +70,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public Result register(HttpServletResponse response, RegisterParam param, BindingResult bindingResult) {
         if (bindingResult != null && bindingResult.hasErrors()) {
-            response.setStatus(403);
-            return Result.fail(ErrorCode.PARAM_ERROR, "参数格式有误");
+            throw new BadRequestException(ErrorCode.PARAM_ERROR.getMessage());
         }
 
         // 用户名不允许重复
         if (getUserByUsername(param.getUsername()) != null ||
                 getUserByMobile(param.getUsername()) != null) {
-            response.setStatus(403);
-            return Result.fail(ErrorCode.EXIST_USERNAME, "用户名已存在");
+            throw new ForbiddenException(ErrorCode.EXIST_USERNAME.getMessage());
         }else if (getUserByMobile(param.getMobile()) != null) {
-            response.setStatus(403);
-            return Result.fail(ErrorCode.EXIST_USERNAME, "该手机号已注册，请直接登录");
+            throw new ForbiddenException(ErrorCode.EXIST_MOBILE.getMessage());
         }
 
         // 验证码错误
         if (!StrUtil.equals(param.getVerifyCode(), (String)redisTemplate.opsForValue().get(param.getMobile() + ":verifyCode"))) {
-            response.setStatus(403);
-            return Result.fail(ErrorCode.REGISTER_FAIL, "验证码错误");
+            throw new ForbiddenException(ErrorCode.ERROR_CODE.getMessage());
         }
 
         User user = new User();
         BeanUtils.copyProperties(param, user);
         user.setId(UUID.randomUUID().toString());
         if (!save(user)) {
-            response.setStatus(403);
-            return Result.fail(ErrorCode.REGISTER_FAIL, "注册失败");
+            throw new ForbiddenException(ErrorCode.REGISTER_FAIL.getMessage());//
         }
 
         return Result.success("注册成功");
@@ -106,16 +102,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         try {
             // 阿里云短信服务未返回成功信息
             if (!VerifyUtils.sendVerifyCode(param.getMobile(), verifyCode)) {
-                response.setStatus(403);
-                return Result.fail(ErrorCode.SEND_VERIFY_CODE_FAIL, "请不要频繁发送请求");
+                throw new InternalServerException(ErrorCode.SEND_VERIFY_CODE_FAIL.getMessage());//
             }
         } catch (Exception e) {
-            return Result.fail(ErrorCode.SEND_VERIFY_CODE_FAIL, "验证码发送失败");
+            throw new InternalServerException(ErrorCode.SEND_VERIFY_CODE_FAIL.getMessage());//
         }
         // 请求过于频繁
         if (redisTemplate.opsForValue().get(param.getMobile() + ":history") != null) {
-            response.setStatus(403);
-            return Result.fail(ErrorCode.SEND_VERIFY_CODE_FAIL, "请不要频繁发送请求");
+            throw new InternalServerException(ErrorCode.SEND_VERIFY_CODE_FAIL.getMessage());//
         }
         // 1分钟之内再次请求不响应
         redisTemplate.opsForValue().set(param.getMobile() + ":history", new Date().toString(), 1, TimeUnit.MINUTES);
@@ -130,16 +124,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         queryWrapper.last("limit 1 ");
         User user = getOne(queryWrapper);
         if (user == null) {
-            response.setStatus(403);
-            return Result.fail(ErrorCode.NO_USER, "该手机号未注册");
+            throw new ForbiddenException(ErrorCode.NO_USER.getMessage());//
         }
         // 验证码错误
         String verifyCode = (String) redisTemplate.opsForValue().get(param.getMobile() + ":verifyCode");
 
         if (!StrUtil.equals(param.getVerifyCode(), verifyCode)) {
-            response.setStatus(403);
-            return Result.fail(ErrorCode.REGISTER_FAIL, "验证码错误");
+            throw new ForbiddenException(ErrorCode.ERROR_CODE.getMessage());//
         }
         return Result.success(user.getPassword());
     }
+
 }

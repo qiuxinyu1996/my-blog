@@ -1,6 +1,7 @@
 package com.qiuxinyu.intercept;
 
-import com.qiuxinyu.exception.UnAuthException;
+import com.qiuxinyu.common.ErrorCode;
+import com.qiuxinyu.exception.UnauthorizedException;
 import com.qiuxinyu.util.JWTUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -13,6 +14,7 @@ import javax.servlet.http.HttpServletResponse;
 public class RequestInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 预请求直接放行
         if ("OPTIONS".equals(request.getMethod())) {
             return true;
         }
@@ -20,7 +22,7 @@ public class RequestInterceptor implements HandlerInterceptor {
         if (JWTUtils.resolveToken(request.getHeader("token"))) {
             return true;
         }
-        throw new UnAuthException("未登录");
+        throw new UnauthorizedException(ErrorCode.NOT_LOGIN.getMessage());
     }
 
     @Override

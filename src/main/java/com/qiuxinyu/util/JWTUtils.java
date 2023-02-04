@@ -11,7 +11,7 @@ import java.util.HashMap;
 public class JWTUtils {
     public static final String JWT_SECRET = "!34ADAS";
 
-    public static final long EXPIRE = 5 * 1000;
+    public static final long EXPIRE = 60 * 60 * 1000;
 
     public static String generateToken(User user){
         return JWT.create()
