@@ -1,6 +1,10 @@
 package com.qiuxinyu.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qiuxinyu.common.Result;
@@ -23,10 +27,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.BindingResult;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static com.qiuxinyu.util.JWTUtils.JWT_SECRET;
 
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
@@ -135,4 +142,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return Result.success(user.getPassword());
     }
 
+    @Override
+    public Result checkToken(HttpServletRequest request, String token) {
+        // 预请求直接放行
+        if ("OPTIONS".equals(request.getMethod())) {
+            return Result.success();
+        }
+        // 拦截校验用户是否登录
+        token = token.replaceAll("\"", "").trim();
+        JWTVerifier jwtVerifier = JWT.require(Algorithm.HMAC256(JWT_SECRET)).build();
+        DecodedJWT verify = jwtVerifier.verify(token);
+        String userName = verify.getClaim("userName").asString();
+        return Result.success("已认证", userName);
+    }
 }

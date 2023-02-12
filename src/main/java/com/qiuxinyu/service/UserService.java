@@ -9,6 +9,7 @@ import com.qiuxinyu.pojo.param.RegisterVerifyParam;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public interface UserService extends IService<User> {
@@ -19,4 +20,6 @@ public interface UserService extends IService<User> {
     Result registerVerify(HttpServletResponse response, RegisterVerifyParam param);
 
     Result getPasswordVerify(HttpServletResponse response, GetPasswordVerifyParam param);
+
+    Result checkToken(HttpServletRequest request, @RequestBody String token);
 }

@@ -10,6 +10,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 
@@ -31,12 +32,17 @@ public class UserController {
     }
 
     @PostMapping("/register/verify")
-    public Result registerVerify(HttpServletResponse response,@RequestBody RegisterVerifyParam param) {
+    public Result registerVerify(HttpServletResponse response, @RequestBody RegisterVerifyParam param) {
         return userService.registerVerify(response, param);
     }
 
     @PostMapping("/getPassword/verify")
-    public Result verify(HttpServletResponse response,@RequestBody GetPasswordVerifyParam param) {
+    public Result verify(HttpServletResponse response, @RequestBody GetPasswordVerifyParam param) {
         return userService.getPasswordVerify(response, param);
+    }
+
+    @PostMapping("/checkToken")
+    public Result checkToken(HttpServletRequest request, @RequestBody String token) {
+        return userService.checkToken(request, token);
     }
 }
